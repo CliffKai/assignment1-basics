@@ -100,8 +100,7 @@ class AdamWCustom(Optimizer):
 
 def get_adamw_cls():
     """
-    返回“我们自研的 AdamW 类”，而不是 torch.optim.AdamW。
-    测试会用它来构造优化器并进行一步/多步更新，对齐官方语义。
+    返回“我们自己实现的AdamW 类”，语义上是对其 torch.optim.AdamW 的。
     """
     return AdamWCustom
 

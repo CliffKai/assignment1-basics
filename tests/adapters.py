@@ -10,6 +10,8 @@ import torch
 from torch import Tensor
 
 from src.nn_utils import softmax as _softmax, cross_entropy as _cross_entropy, gradient_clipping as _grad_clip
+from src.optim_sched import get_adamw_cls as _adamw_cls
+from src.optim_sched import get_lr_cosine_schedule as _get_lr_cosine_schedule
 
 
 def run_linear(
@@ -479,7 +481,7 @@ def get_adamw_cls() -> Any:
     """
     Returns a torch.optim.Optimizer that implements AdamW.
     """
-    raise NotImplementedError
+    return _adamw_cls()
 
 
 def run_get_lr_cosine_schedule(
@@ -507,7 +509,13 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
-    raise NotImplementedError
+    return _get_lr_cosine_schedule(
+        it=it,
+        max_learning_rate=max_learning_rate,
+        min_learning_rate=min_learning_rate,
+        warmup_iters=warmup_iters,
+        cosine_cycle_iters=cosine_cycle_iters,
+    )
 
 
 def run_save_checkpoint(
