@@ -13,6 +13,7 @@ from src.nn_utils import softmax as _softmax, cross_entropy as _cross_entropy, g
 from src.optim_sched import get_adamw_cls as _adamw_cls
 from src.optim_sched import get_lr_cosine_schedule as _get_lr_cosine_schedule
 from src.data import get_batch as _get_batch
+from src.io import save_checkpoint as _save_ckpt, load_checkpoint as _load_ckpt
 
 
 def run_linear(
@@ -540,7 +541,7 @@ def run_save_checkpoint(
             we've completed.
         out (str | os.PathLike | BinaryIO | IO[bytes]): Path or file-like object to serialize the model, optimizer, and iteration to.
     """
-    raise NotImplementedError
+    return _save_ckpt(model=model, optimizer=optimizer, iteration=iteration, out=out)
 
 
 def run_load_checkpoint(
@@ -561,7 +562,7 @@ def run_load_checkpoint(
     Returns:
         int: the previously-serialized number of iterations.
     """
-    raise NotImplementedError
+    return _load_ckpt(src=src, model=model, optimizer=optimizer)
 
 
 def get_tokenizer(
