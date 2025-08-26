@@ -12,6 +12,7 @@ from torch import Tensor
 from src.nn_utils import softmax as _softmax, cross_entropy as _cross_entropy, gradient_clipping as _grad_clip
 from src.optim_sched import get_adamw_cls as _adamw_cls
 from src.optim_sched import get_lr_cosine_schedule as _get_lr_cosine_schedule
+from src.data import get_batch as _get_batch
 
 
 def run_linear(
