@@ -14,6 +14,7 @@ from src.optim_sched import get_adamw_cls as _adamw_cls
 from src.optim_sched import get_lr_cosine_schedule as _get_lr_cosine_schedule
 from src.data import get_batch as _get_batch
 from src.io import save_checkpoint as _save_ckpt, load_checkpoint as _load_ckpt
+from src.bpe.tokenizer import get_tokenizer as _get_tok
 
 
 def run_linear(
@@ -585,7 +586,7 @@ def get_tokenizer(
     Returns:
         A BPE tokenizer that uses the provided vocab, merges, and special tokens.
     """
-    raise NotImplementedError
+    return _get_tok(vocab, merges, special_tokens)
 
 
 def run_train_bpe(
