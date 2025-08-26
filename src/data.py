@@ -1,31 +1,53 @@
 # src/data.py
-from __future__ import annotations
+from __future__ import annotations          
 import numpy as np
 import numpy.typing as npt
 import torch
 
 def get_batch(
-    *, dataset: npt.NDArray, batch_size: int, context_length: int, device: str
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """
-    从一维 token 序列里随机采样 (batch_size, context_length) 的输入与右移标签。
-    返回的张量 dtype 为 torch.long，放置到给定 device。
-    """
-    n = int(dataset.shape[0])
-    if n < context_length + 1:
-        raise ValueError(
-            f"dataset too short: need at least context_length+1={context_length+1}, got {n}"
-        )
+    *,
+    dataset_np,
+    batch_size: int,
+    context_length: int,
+    device: str,
+    pin_memory: bool = False   # 默认 False
+):
+    is_cuda = str(device).startswith("cuda")
 
-    # 起点 i 的可选范围：[0, n - context_length - 1]（含端点）
-    max_start = n - context_length - 1
-    starts = np.random.randint(0, max_start + 1, size=(batch_size,))  # [low, high)
+    if pin_memory and not is_cuda:
+        raise ValueError("pin_memory=True only makes sense when device is CUDA")
 
-    # 逐个切片再堆叠成 (B, T)
-    X = np.stack([dataset[i : i + context_length] for i in starts], axis=0)
-    Y = np.stack([dataset[i + 1 : i + 1 + context_length] for i in starts], axis=0)
+    if not pin_memory:
+        toks = torch.as_tensor(dataset_np, dtype=torch.long, device=device)
+        n = toks.numel()
+        if n < context_length + 1:
+            raise ValueError(f"need at least {context_length+1}, got {n}")
 
-    # 转为 torch.long 并放置到 device
-    X_t = torch.as_tensor(X, dtype=torch.long, device=device)
-    Y_t = torch.as_tensor(Y, dtype=torch.long, device=device)
-    return X_t, Y_t
+        max_start = n - context_length - 1
+        starts = torch.randint(0, max_start + 1, (batch_size,), device=device)
+        ar = torch.arange(context_length, device=device)
+        idx = starts[:, None] + ar[None, :]
+
+        X = toks[idx]
+        Y = toks[idx + 1]
+        return X, Y
+
+    else:
+        toks_cpu = torch.as_tensor(dataset_np, dtype=torch.long, device="cpu")
+        if pin_memory:
+            toks_cpu = toks_cpu.pin_memory()
+        n = toks_cpu.numel()
+        if n < context_length + 1:
+            raise ValueError(f"need at least {context_length+1}, got {n}")
+
+        max_start = n - context_length - 1
+        starts = torch.randint(0, max_start + 1, (batch_size,), device="cpu")
+        ar = torch.arange(context_length, device="cpu")
+        idx = starts[:, None] + ar[None, :]
+
+        X_cpu = toks_cpu[idx]
+        Y_cpu = toks_cpu[idx + 1]
+
+        X = X_cpu.to(device, non_blocking=True)
+        Y = Y_cpu.to(device, non_blocking=True)
+        return X, Y
