@@ -14,13 +14,6 @@ PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s
 
 
 class Tokenizer:
-    """
-    一个完整的、从头开始实现的BPE分词器，与GPT-2的分词方式兼容。
-
-    这个类包含了从文本到token ID的编码（encode）和从token ID到文本的解码（decode）的全部逻辑。
-    它支持特殊token，并提供了内存高效的方式来处理大型文件流。
-    """
-
     def __init__(
         self,
         vocab: dict[int, bytes],
