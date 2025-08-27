@@ -1,3 +1,31 @@
+# 指南
+
+1. Note：作业讲解、笔记以及一些课堂随笔
+2. src：作业代码
+
+# 运行
+
+1. 所有模块都测试：
+
+```sh
+uv run pytest
+```
+
+2. 只测试某个模块：
+
+```sh
+uv run -- pytest -x -vv -k "module name"
+```
+
+e.g.进行test_tokenizer.py的测试：
+
+```sh
+uv run -- pytest -x -vv -k tokenizer
+```
+
+
+**下面是官方README内容：**
+
 # CS336 Spring 2025 Assignment 1: Basics
 
 For a full description of the assignment, see the assignment handout at

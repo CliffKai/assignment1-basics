@@ -1,5 +1,4 @@
-# filename: cs336_basics/bpe/tokenizer.py
-
+# src/bpe/tokenizer.py
 from __future__ import annotations
 
 import json
