@@ -1,123 +1,195 @@
-# src/bpe/train_bpe.py
-
-from __future__ import annotations
-
 import os
 import regex as re
-from collections import Counter
-from multiprocessing import Pool, cpu_count
-from typing import IO, BinaryIO, Any
-from itertools import repeat # 确保导入 repeat
+from collections import Counter, defaultdict
+from concurrent.futures import ProcessPoolExecutor
+from typing import Optional
 
-# 从作业PDF中获取的预分词模式
+# GPT-2 使用的预分词正则表达式模式
+# 这个模式能够处理大多数情况，包括撇号、单词、数字、标点和空格
 # 来源: cs336_spring2025_assignment1_basics.pdf, page 6
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+COMPILED_PAT = re.compile(PAT)
 
-def _get_stats(vocab: dict[tuple[str, ...], int]) -> Counter:
-    """
-    计算一个词汇表中所有相邻token对的频率。
-    """
-    pairs = Counter()
-    for word_tokens, freq in vocab.items():
-        for i in range(len(word_tokens) - 1):
-            pairs[(word_tokens[i], word_tokens[i+1])] += freq
-    return pairs
 
-def _merge_vocab(pair: tuple[str, str], v_in: dict[tuple[str, ...], int]) -> dict[tuple[str, ...], int]:
+def get_stats(word_counts: dict[tuple[bytes, ...], int]) -> Counter:
     """
-    在词汇表中执行一次合并操作。
+    计算语料库中所有相邻token对的频率。
+
+    Args:
+        word_counts (dict): 一个字典，键是表示单词的字节元组，值是该单词的频率。
+
+    Returns:
+        Counter: 一个计数器，存储了每个字节对及其出现的总次数。
     """
-    v_out = {}
-    bigram = re.escape(' '.join(pair))
-    p = re.compile(r'(?<!\S)' + bigram + r'(?!\S)')
+    pair_counts = Counter()
+    for word_tuple, count in word_counts.items():
+        for i in range(len(word_tuple) - 1):
+            pair = (word_tuple[i], word_tuple[i + 1])
+            pair_counts[pair] += count
+    return pair_counts
+
+
+def merge(
+    word_counts: dict[tuple[bytes, ...], int],
+    pair_to_merge: tuple[bytes, bytes],
+    new_token: bytes,
+) -> dict[tuple[bytes, ...], int]:
+    """
+    在一个“单词”词汇表中执行一次合并操作。
+
+    Args:
+        word_counts (dict): 当前的单词及其频率。
+        pair_to_merge (tuple): 需要被合并的字节对。
+        new_token (bytes): 由被合并的字节对创建的新token。
+
+    Returns:
+        dict: 合并操作后更新的单词及其频率。
+    """
+    new_word_counts = defaultdict(int)
+    p1, p2 = pair_to_merge
+    for word_tuple, count in word_counts.items():
+        i = 0
+        new_word_tuple = []
+        while i < len(word_tuple):
+            # 查找并替换需要合并的字节对
+            if i < len(word_tuple) - 1 and word_tuple[i] == p1 and word_tuple[i + 1] == p2:
+                new_word_tuple.append(new_token)
+                i += 2
+            else:
+                new_word_tuple.append(word_tuple[i])
+                i += 1
+        new_word_counts[tuple(new_word_tuple)] += count
+    return dict(new_word_counts)
+
+
+def parallel_pre_tokenize(text: str, special_tokens: list[str], n_workers: Optional[int] = None) -> Counter:
+    """
+    使用多进程并行地对文本进行预分词和计数。
+
+    Args:
+        text (str): 完整的输入文本。
+        special_tokens (list[str]): 特殊token列表。
+        n_workers (int, optional): 使用的进程数。默认为 os.cpu_count()。
+
+    Returns:
+        Counter: 每个预分词块（word）及其频率的计数器。
+    """
+    if not text:
+        return Counter()
     
-    for word_tokens, freq in v_in.items():
-        word_str = ' '.join(word_tokens)
-        new_word_str = p.sub(''.join(pair), word_str)
-        new_word_tokens = tuple(new_word_str.split(' '))
-        v_out[new_word_tokens] = freq
+    # ------------------- START: 修复逻辑 -------------------
+    text_chunks_to_process = []
+    if special_tokens:
+        # 创建用于分割的正则表达式，并使用捕获组来保留分隔符
+        special_pattern = f"({'|'.join(re.escape(st) for st in special_tokens)})"
+        all_chunks = re.split(special_pattern, text)
         
-    return v_out
+        # re.split 会将文本和分隔符交替放入列表。
+        # 偶数索引是文本块，奇数索引是特殊token本身。
+        # 我们只对文本块进行预分词。
+        for i in range(0, len(all_chunks), 2):
+            chunk = all_chunks[i]
+            if chunk:  # 仅处理非空文本块
+                text_chunks_to_process.append(chunk)
+    else:
+        # 如果没有特殊token，整个文本就是一个块
+        text_chunks_to_process.append(text)
+    # ------------------- END: 修复逻辑 -------------------
 
-def _process_chunk(chunk: str, special_tokens_pattern: re.Pattern | None) -> Counter:
-    """
-    处理单个文本块：分割特殊字符，预分词，并计算词频。
-    这是由并行工作进程执行的顶级函数，可以被pickle。
-    """
     word_counts = Counter()
-    tokenizer_pattern = re.compile(PAT)
-    
-    sub_chunks = [chunk]
-    if special_tokens_pattern:
-        sub_chunks = special_tokens_pattern.split(chunk)
 
-    for sub_chunk in sub_chunks:
-        if not sub_chunk:
-            continue
-        pre_tokens = tokenizer_pattern.findall(sub_chunk)
-        word_counts.update(pre_tokens)
+    # 使用进程池并行处理每个文本块
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        # map 会自动处理块的分发和结果的收集
+        results = executor.map(worker_tokenize_chunk, text_chunks_to_process)
         
+        # 聚合所有进程的结果
+        for result_counter in results:
+            word_counts.update(result_counter)
+            
     return word_counts
+
+def worker_tokenize_chunk(chunk: str) -> Counter:
+    """
+    单个工作进程执行的函数，对一个文本块进行预分词和计数。
+    """
+    counts = Counter()
+    # 使用 finditer 以提高内存效率
+    for match in COMPILED_PAT.finditer(chunk):
+        word_bytes = match.group(0).encode("utf-8")
+        counts[word_bytes] += 1
+    return counts
 
 
 def run_train_bpe(
     input_path: str | os.PathLike,
     vocab_size: int,
     special_tokens: list[str],
-    **kwargs: Any,
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
     """
-    根据给定的输入语料库训练一个字节对编码（BPE）分词器。
+    在给定的输入语料库上训练一个BPE分词器。
+
+    Args:
+        input_path (str | os.PathLike): BPE训练数据的路径。
+        vocab_size (int): 最终词汇表的大小（包括初始字节和特殊token）。
+        special_tokens (list[str]): 特殊token列表。
+
+    Returns:
+        一个元组，包含:
+        - vocab (dict[int, bytes]): 训练好的词汇表 (token_id -> bytes)。
+        - merges (list[tuple[bytes, bytes]]): 按顺序学习到的BPE合并规则。
     """
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+    if vocab_size < 256:
+        raise ValueError("Vocab size must be at least 256.")
+
     # 1. 初始化词汇表
-    vocab = {i: bytes([i]) for i in range(256)}
+    # 词汇表从 256 个基本字节开始
+    vocab_list = [bytes([i]) for i in range(256)]
+    # 添加特殊token到词汇表
     for token in special_tokens:
         token_bytes = token.encode("utf-8")
-        if token_bytes not in vocab.values():
-            vocab[len(vocab)] = token_bytes
-            
-    # 2. 并行预分词和词频统计
+        if token_bytes not in vocab_list:
+            vocab_list.append(token_bytes)
+
+    # 2. 预分词
     with open(input_path, "r", encoding="utf-8") as f:
         text = f.read()
-
-    special_tokens_pattern = None
-    if special_tokens:
-        escaped_tokens = [re.escape(st) for st in special_tokens]
-        special_tokens_pattern = re.compile(f"({'|'.join(escaped_tokens)})")
-
-    num_procs = cpu_count()
-    chunk_size = (len(text) + num_procs - 1) // num_procs
-    chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
     
-    # 使用 starmap 替代 map，避免使用不可序列化的 lambda 函数
-    starmap_args = zip(chunks, repeat(special_tokens_pattern))
-    
-    with Pool(num_procs) as pool:
-        results = pool.starmap(_process_chunk, starmap_args)
-    
-    word_counts = Counter()
-    for result in results:
-        word_counts.update(result)
-        
-    # 将单词字符串转换为字符元组以进行合并
-    splits = { tuple(word): freq for word, freq in word_counts.items() }
+    pre_token_counts = parallel_pre_tokenize(text, special_tokens)
 
-    # 3. BPE 合并循环
+    # 将单词转换为字节元组的表示形式，例如 b"hello" -> (b'h', b'e', b'l', b'l', b'o')
+    word_counts = {
+        tuple(bytes([b]) for b in word): count
+        for word, count in pre_token_counts.items()
+    }
+
+    # 3. 迭代合并
     merges = []
-    num_merges = vocab_size - len(vocab)
-    
-    for i in range(num_merges):
-        pair_stats = _get_stats(splits)
-        if not pair_stats:
-            break
-            
-        best_pair = max(pair_stats, key=pair_stats.get)
-        
-        splits = _merge_vocab(best_pair, splits)
-        
-        merges.append(tuple(p.encode("utf-8") for p in best_pair))
-        
-        new_token_bytes = "".join(best_pair).encode("utf-8")
-        vocab[len(vocab)] = new_token_bytes
+    num_merges = vocab_size - len(vocab_list)
 
-    return vocab, merges
+    for i in range(num_merges):
+        # 计算当前所有相邻字节对的频率
+        stats = get_stats(word_counts)
+        if not stats:
+            # 如果没有可合并的对，则提前停止
+            break
+        
+        # 找到频率最高的字节对。如果频率相同，max()会根据元组的字典序来决定，
+        # 这满足了PDF中的平局处理规则。
+        best_pair = max(stats, key=lambda p: (stats[p], p))
+        
+        # 执行合并
+        new_token = best_pair[0] + best_pair[1]
+        word_counts = merge(word_counts, best_pair, new_token)
+        
+        # 记录这次合并
+        merges.append(best_pair)
+        if new_token not in vocab_list:
+            vocab_list.append(new_token)
+    
+    # 4. 构建最终的词汇表字典
+    final_vocab = {i: token_bytes for i, token_bytes in enumerate(vocab_list)}
+
+    return final_vocab, merges
