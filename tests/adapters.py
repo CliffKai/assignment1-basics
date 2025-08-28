@@ -15,6 +15,7 @@ from src.optim_sched import get_lr_cosine_schedule as _get_lr_cosine_schedule
 from src.data import get_batch as _get_batch
 from src.io import save_checkpoint as _save_ckpt, load_checkpoint as _load_ckpt
 from src.bpe.tokenizer2 import get_tokenizer as _get_tok
+from src.bpe.train_bpe import run_train_bpe as _run_train_bpe_impl
 
 
 def run_linear(
@@ -616,4 +617,9 @@ def run_train_bpe(
                 representing that <token1> was merged with <token2>.
                 Merges are ordered by order of creation.
     """
-    raise NotImplementedError
+    return _run_train_bpe_impl(
+        input_path=input_path,
+        vocab_size=vocab_size,
+        special_tokens=special_tokens,
+        **kwargs
+    )
