@@ -225,8 +225,9 @@ class Tokenizer:
         token_bytes_list = [self.vocab.get(i, b"") for i in ids]
         
         # 连接所有字节并解码为字符串
-        # 使用'replace'来处理任何无效的UTF-8序列，符合PDF中的要求。
-        return b"".join(token_bytes_list).decode("utf-8", errors="replace")
+        # 使用'replace'来处理任何无效的UTF-8序列
+        full_bytes = b"".join(token_bytes_list)
+        return full_bytes.decode("utf-8", errors="replace")
         
     @classmethod
     def from_files(
