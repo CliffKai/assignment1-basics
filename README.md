@@ -11,7 +11,7 @@
 uv run pytest
 ```
 
-2. 只测试某个模块：
+2. 单独测试某个模块：
 
 ```sh
 uv run -- pytest -x -vv -k "module name"
