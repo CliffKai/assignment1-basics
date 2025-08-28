@@ -52,11 +52,10 @@ class Tokenizer:
         处理和设置特殊token，包括更新词汇表和构建用于分割的正则表达式。
         """
         # 为了正确处理重叠的特殊token（例如"<|eot|>"和"<|eot|><|eot|>"),
-        # 我们按长度降序排序，确保优先匹配最长的特殊token。
-        # 来源: 启发于 test_tokenizer.py 中的 `test_overlapping_special_tokens`
+        # 按长度降序排序，确保优先匹配最长的特殊token
         sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
         
-        # 将特殊token添加到词汇表中（如果它们尚不存在）
+        # 将特殊token添加到词汇表中
         for token_str in sorted_special_tokens:
             token_bytes = token_str.encode("utf-8")
             if token_bytes not in self.encoder:
@@ -70,7 +69,7 @@ class Tokenizer:
             self.special_tokens_decoder[self.encoder[token_bytes]] = token_str
 
         # 创建一个正则表达式，用于根据特殊token分割输入文本
-        # 我们使用re.escape来安全地处理可能包含正则表达式元字符的特殊token
+        # 使用re.escape来安全地处理可能包含正则表达式元字符的特殊token
         special_pattern = "|".join(re.escape(st) for st in sorted_special_tokens)
         self.special_pat = re.compile(f"({special_pattern})")
 
