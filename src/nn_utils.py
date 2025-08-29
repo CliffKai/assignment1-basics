@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterable
 import torch
 from torch import Tensor
+from jaxtyping import Float
 
 def softmax(in_features: Tensor, dim: int) -> Tensor:
     shifted = in_features - in_features.max(dim=dim, keepdim=True).values
@@ -27,3 +28,9 @@ def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: flo
     if clip_coef < 1.0:
         for p in params:
             p.grad.detach().mul_(clip_coef.to(p.grad.device))  # 原地缩放
+
+def silu(x: Float[Tensor, "..."]) -> Float[Tensor, "..."]:
+    """
+    公式: SiLU(x) = x * sigmoid(x)
+    """
+    return x * torch.sigmoid(x)

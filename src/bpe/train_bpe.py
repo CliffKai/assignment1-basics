@@ -6,7 +6,6 @@ from typing import Optional
 
 # GPT-2 使用的预分词正则表达式模式
 # 这个模式能够处理大多数情况，包括撇号、单词、数字、标点和空格
-# 来源: cs336_spring2025_assignment1_basics.pdf, page 6
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 COMPILED_PAT = re.compile(PAT)
 

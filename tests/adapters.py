@@ -16,6 +16,7 @@ from src.data import get_batch as _get_batch
 from src.io import save_checkpoint as _save_ckpt, load_checkpoint as _load_ckpt
 from src.bpe.tokenizer2 import get_tokenizer as _get_tok
 from src.bpe.train_bpe import run_train_bpe as _run_train_bpe_impl
+from src.nn_utils import silu
 
 
 def run_linear(
@@ -400,7 +401,7 @@ def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
         Float[Tensor,"..."]: of with the same shape as `in_features` with the output of applying
         SiLU to each element.
     """
-    raise NotImplementedError
+    return silu(in_features)
 
 
 def run_get_batch(
