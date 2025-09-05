@@ -16,6 +16,12 @@ from src.data import get_batch as _get_batch
 from src.io import save_checkpoint as _save_ckpt, load_checkpoint as _load_ckpt
 from src.bpe.tokenizer2 import get_tokenizer as _get_tok
 from src.bpe.train_bpe import run_train_bpe as _run_train_bpe_impl
+from src.model.linear import Linear
+from src.model.embedding import Embedding, RotaryPositionalEmbedding
+from src.model.feed_forward import SwiGLU
+from src.model.attention import scaled_dot_product_attention, MultiHeadSelfAttention
+from src.model.normalization import RMSNorm
+from src.model.transformer import TransformerBlock, TransformerLM
 from src.nn_utils import silu
 
 
@@ -60,7 +66,9 @@ def run_embedding(
         Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
     """
 
-    raise NotImplementedError
+    embedding_layer = Embedding(vocab_size, d_model)
+    embedding_layer.weight.data = weights
+    return embedding_layer(token_ids)
 
 
 def run_swiglu(
@@ -92,7 +100,11 @@ def run_swiglu(
     # swiglu.w1.weight.data = w1_weight
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
-    raise NotImplementedError
+    swiglu_layer = SwiGLU(d_model, d_ff)
+    swiglu_layer.w1.weight.data = w1_weight
+    swiglu_layer.w2.weight.data = w2_weight
+    swiglu_layer.w3.weight.data = w3_weight
+    return swiglu_layer(in_features)
 
 
 def run_scaled_dot_product_attention(
@@ -113,7 +125,7 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    raise NotImplementedError
+    return scaled_dot_product_attention(Q, K, V, mask)
 
 
 def run_multihead_self_attention(
@@ -147,7 +159,22 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    # 这个测试不使用 RoPE，所以我们创建一个 dummy RoPE
+    class DummyRoPE(torch.nn.Module):
+        def forward(self, x, token_positions):
+            return x
+            
+    mha = MultiHeadSelfAttention(d_model, num_heads, rope=DummyRoPE())
+    mha.q_proj.weight.data = q_proj_weight
+    mha.k_proj.weight.data = k_proj_weight
+    mha.v_proj.weight.data = v_proj_weight
+    mha.o_proj.weight.data = o_proj_weight
+
+    # Dummy token_positions
+    seq_len = in_features.shape[-2]
+    token_positions = torch.arange(seq_len).unsqueeze(0).expand(in_features.shape[0], -1)
+    
+    return mha(in_features, token_positions)
 
 
 def run_multihead_self_attention_with_rope(
@@ -187,7 +214,20 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    d_head = d_model // num_heads
+    rope = RotaryPositionalEmbedding(d_head, max_seq_len, theta)
+    mha = MultiHeadSelfAttention(d_model, num_heads, rope=rope)
+    
+    mha.q_proj.weight.data = q_proj_weight
+    mha.k_proj.weight.data = k_proj_weight
+    mha.v_proj.weight.data = v_proj_weight
+    mha.o_proj.weight.data = o_proj_weight
+
+    if token_positions is None:
+        seq_len = in_features.shape[-2]
+        token_positions = torch.arange(seq_len).unsqueeze(0).expand(in_features.shape[0], -1)
+
+    return mha(in_features, token_positions)
 
 
 def run_rope(
@@ -209,7 +249,8 @@ def run_rope(
     Returns:
         Float[Tensor, " ... sequence_length d_k"]: Tensor with RoPEd input.
     """
-    raise NotImplementedError
+    rope_layer = RotaryPositionalEmbedding(d_k, max_seq_len, theta, device=in_query_or_key.device)
+    return rope_layer(in_query_or_key, token_positions)
 
 
 def run_transformer_block(
@@ -282,7 +323,25 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    d_head = d_model // num_heads
+    rope = RotaryPositionalEmbedding(d_head, max_seq_len, theta, device=in_features.device)
+    block = TransformerBlock(d_model, num_heads, d_ff, rope, device=in_features.device)
+    
+    # 手动加载权重，因为 state_dict 键名可能不完全匹配
+    block.ln1.gain.data = weights["ln1.weight"]
+    block.attn.q_proj.weight.data = weights["attn.q_proj.weight"]
+    block.attn.k_proj.weight.data = weights["attn.k_proj.weight"]
+    block.attn.v_proj.weight.data = weights["attn.v_proj.weight"]
+    block.attn.o_proj.weight.data = weights["attn.output_proj.weight"]
+    block.ln2.gain.data = weights["ln2.weight"]
+    block.ffn.w1.weight.data = weights["ffn.w1.weight"]
+    block.ffn.w2.weight.data = weights["ffn.w2.weight"]
+    block.ffn.w3.weight.data = weights["ffn.w3.weight"]
+
+    seq_len = in_features.shape[1]
+    token_positions = torch.arange(seq_len, device=in_features.device).unsqueeze(0).expand(in_features.shape[0], -1)
+
+    return block(in_features, token_positions)
 
 
 def run_transformer_lm(
@@ -364,7 +423,11 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    model = TransformerLM(
+        vocab_size, context_length, d_model, num_layers, num_heads, d_ff, rope_theta, device=in_indices.device
+    )
+    model.load_state_dict(weights)
+    return model(in_indices)
 
 
 def run_rmsnorm(
@@ -387,7 +450,9 @@ def run_rmsnorm(
         Float[Tensor,"... d_model"]: Tensor of with the same shape as `in_features` with the output of running
         RMSNorm of the `in_features`.
     """
-    raise NotImplementedError
+    rmsnorm_layer = RMSNorm(d_model, eps, device=in_features.device)
+    rmsnorm_layer.gain.data = weights
+    return rmsnorm_layer(in_features)
 
 
 def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
