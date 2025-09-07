@@ -5,7 +5,7 @@ import numpy.typing as npt
 import torch
 
 def get_batch(
-    *, dataset_np, batch_size: int, context_length: int,
+    *, dataset: npt.NDArray, batch_size: int, context_length: int,
     device: str, pin_memory: bool = False
 ):
     is_cuda = str(device).startswith("cuda")
@@ -14,11 +14,11 @@ def get_batch(
 
     if pin_memory:
         # CPU + pinned 路径
-        toks = torch.as_tensor(dataset_np, dtype=torch.long, device="cpu").pin_memory()
+        toks = torch.as_tensor(dataset, dtype=torch.long, device="cpu").pin_memory()
         idx_device = "cpu"
     else:
         # 直接放目标设备
-        toks = torch.as_tensor(dataset_np, dtype=torch.long, device=device)
+        toks = torch.as_tensor(dataset, dtype=torch.long, device=device)
         idx_device = device  # 索引必须与 toks 在同设备
 
     n = toks.numel()

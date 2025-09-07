@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import regex as re
+import base64
 from typing import Any, IO, BinaryIO
 from collections.abc import Iterable, Iterator
 
@@ -251,7 +252,7 @@ class Tokenizer:
         with open(vocab_filepath, "r", encoding="utf-8") as f:
             vocab_json = json.load(f)
             # JSON键必须是字符串，所以我们将它们转换回整数
-            vocab = {int(k): v.encode("utf-8") for k, v in vocab_json.items()}
+            vocab = {int(k): base64.b64decode(v) for k, v in vocab_json.items()}
 
         # 加载合并规则
         merges = []
@@ -260,7 +261,7 @@ class Tokenizer:
                 # 忽略注释和空行
                 if line.startswith("#") or not line.strip():
                     continue
-                p1, p2 = line.strip().split()
+                p1, p2 = line.rstrip('\n').split('\t')
                 merges.append((p1.encode("utf-8"), p2.encode("utf-8")))
 
         return cls(vocab=vocab, merges=merges, special_tokens=special_tokens)

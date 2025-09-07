@@ -30,7 +30,7 @@ class RMSNorm(nn.Module):
         self.d_model = d_model
         self.eps = eps
         factory_kwargs = {"device": device, "dtype": dtype}
-        self.gain = nn.Parameter(torch.ones(d_model, **factory_kwargs))
+        self.weight = nn.Parameter(torch.ones(d_model, **factory_kwargs))
 
     def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
         """
@@ -50,7 +50,7 @@ class RMSNorm(nn.Module):
         rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
         
         # 归一化并应用可学习的 gain 参数
-        normalized_x = x * rms * self.gain
+        normalized_x = x * rms * self.weight
 
         # 转换回原始数据类型
         return normalized_x.to(in_dtype)

@@ -1,9 +1,12 @@
 # 指南
 
-1. Note：作业讲解、笔记以及一些课堂随笔
+1. Note：作业讲解
 2. src：作业代码
+3. 课堂笔记（如果会记的话）：https://github.com/CliffKai/spring2025-lectures
 
 # 运行
+
+## 1.测试
 
 1. 所有模块都测试：
 
@@ -22,6 +25,12 @@ e.g.进行test_tokenizer.py的测试：
 ```sh
 uv run -- pytest -x -vv -k tokenizer
 ```
+
+## 2.训练
+
+训练脚本见 `train_bash.sh`
+
+生成脚本见 `generate_bash.sh`
 
 
 **下面是官方README内容：**

@@ -123,8 +123,8 @@ class RotaryPositionalEmbedding(nn.Module):
         freqs_cis = self.freqs_cis[token_positions]
         
         # 扩展维度以匹配 x_complex 的批处理维度
-        while len(freqs_cis.shape) < len(x_complex.shape):
-            freqs_cis = freqs_cis.unsqueeze(0)
+        if x_complex.dim() == 4: # 典型的 (batch, head, seq, dim)
+            freqs_cis = freqs_cis.unsqueeze(1)
 
         # 应用旋转: (a + ib) * (cos + isin) = (a*cos - b*sin) + i*(a*sin + b*cos)
         x_rotated = x_complex * freqs_cis

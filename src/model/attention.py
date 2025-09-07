@@ -74,7 +74,7 @@ class MultiHeadSelfAttention(nn.Module):
         self.q_proj = Linear(d_model, d_model, **factory_kwargs)
         self.k_proj = Linear(d_model, d_model, **factory_kwargs)
         self.v_proj = Linear(d_model, d_model, **factory_kwargs)
-        self.o_proj = Linear(d_model, d_model, **factory_kwargs)
+        self.output_proj = Linear(d_model, d_model, **factory_kwargs)
 
         self.register_buffer("causal_mask", None, persistent=False)
 
@@ -126,4 +126,4 @@ class MultiHeadSelfAttention(nn.Module):
         attn_output = rearrange(attn_output, "b h s d -> b s (h d)")
 
         # 7. 输出投影
-        return self.o_proj(attn_output)
+        return self.output_proj(attn_output)

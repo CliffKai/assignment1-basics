@@ -170,7 +170,7 @@ def run_multihead_self_attention(
     mha.q_proj.weight.data = q_proj_weight
     mha.k_proj.weight.data = k_proj_weight
     mha.v_proj.weight.data = v_proj_weight
-    mha.o_proj.weight.data = o_proj_weight
+    mha.output_proj.weight.data = o_proj_weight
 
     # Dummy token_positions
     seq_len = in_features.shape[-2]
@@ -223,7 +223,7 @@ def run_multihead_self_attention_with_rope(
     mha.q_proj.weight.data = q_proj_weight
     mha.k_proj.weight.data = k_proj_weight
     mha.v_proj.weight.data = v_proj_weight
-    mha.o_proj.weight.data = o_proj_weight
+    mha.output_proj.weight.data = o_proj_weight
 
     if token_positions is None:
         seq_len = in_features.shape[-2]
@@ -330,12 +330,12 @@ def run_transformer_block(
     block = TransformerBlock(d_model, num_heads, d_ff, rope, device=in_features.device)
     
     # 手动加载权重，因为 state_dict 键名可能不完全匹配
-    block.ln1.gain.data = weights["ln1.weight"]
+    block.ln1.weight.data = weights["ln1.weight"]
     block.attn.q_proj.weight.data = weights["attn.q_proj.weight"]
     block.attn.k_proj.weight.data = weights["attn.k_proj.weight"]
     block.attn.v_proj.weight.data = weights["attn.v_proj.weight"]
-    block.attn.o_proj.weight.data = weights["attn.output_proj.weight"]
-    block.ln2.gain.data = weights["ln2.weight"]
+    block.attn.output_proj.weight.data = weights["attn.output_proj.weight"]
+    block.ln2.weight.data = weights["ln2.weight"]
     block.ffn.w1.weight.data = weights["ffn.w1.weight"]
     block.ffn.w2.weight.data = weights["ffn.w2.weight"]
     block.ffn.w3.weight.data = weights["ffn.w3.weight"]
@@ -453,7 +453,7 @@ def run_rmsnorm(
         RMSNorm of the `in_features`.
     """
     rmsnorm_layer = RMSNorm(d_model, eps, device=in_features.device)
-    rmsnorm_layer.gain.data = weights
+    rmsnorm_layer.weight.data = weights
     return rmsnorm_layer(in_features)
 
 

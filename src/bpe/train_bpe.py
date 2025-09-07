@@ -152,13 +152,27 @@ def run_train_bpe(
         if token_bytes not in vocab_list:
             vocab_list.append(token_bytes)
 
-    # 2. 预分词
-    with open(input_path, "r", encoding="utf-8") as f:
-        text = f.read()
-    
-    pre_token_counts = parallel_pre_tokenize(text, special_tokens)
+    # 2. 预分词 (内存高效的分块处理方式)
+    print("  - 开始分块预分词，以节省内存...")
+    pre_token_counts = Counter()
+    # 每次处理 100MB 的文件块
+    chunk_size = 100 * 1024 * 1024 
 
-    # 将单词转换为字节元组的表示形式，例如 b"hello" -> (b'h', b'e', b'l', b'l', b'o')
+    with open(input_path, "r", encoding="utf-8") as f:
+        while True:
+            chunk_text = f.read(chunk_size)
+            if not chunk_text:
+                break
+            
+            # 使用你的并行函数处理当前块
+            chunk_counts = parallel_pre_tokenize(chunk_text, special_tokens)
+            # 聚合结果
+            pre_token_counts.update(chunk_counts)
+            print(f"  - 已处理一个数据块，当前总词块数: {len(pre_token_counts)}")
+
+    print("  - 所有数据块预分词完成。")
+
+    # 将单词转换为字节元组的表示形式...
     word_counts = {
         tuple(bytes([b]) for b in word): count
         for word, count in pre_token_counts.items()
