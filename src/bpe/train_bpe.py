@@ -76,7 +76,6 @@ def parallel_pre_tokenize(text: str, special_tokens: list[str], n_workers: Optio
     if not text:
         return Counter()
     
-    # ------------------- START: 修复逻辑 -------------------
     text_chunks_to_process = []
     if special_tokens:
         # 创建用于分割的正则表达式，并使用捕获组来保留分隔符
@@ -93,7 +92,6 @@ def parallel_pre_tokenize(text: str, special_tokens: list[str], n_workers: Optio
     else:
         # 如果没有特殊token，整个文本就是一个块
         text_chunks_to_process.append(text)
-    # ------------------- END: 修复逻辑 -------------------
 
     word_counts = Counter()
 
