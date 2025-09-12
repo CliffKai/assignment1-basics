@@ -1,4 +1,5 @@
 checkpoints/
+.vscode/
 
 bpe_tokenizer/
 
