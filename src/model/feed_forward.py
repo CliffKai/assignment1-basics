@@ -25,7 +25,7 @@ class SwiGLU(nn.Module):
 
         Args:
             d_model: 模型的隐藏维度。
-            d_ff: 内部前馈层的维度。如果为 None，则根据 PDF 规范计算。
+            d_ff: 内部前馈层的维度。如果为 None，则根据作业中规范计算。
             device: 参数所在的设备。
             dtype: 参数的数据类型。
         """
@@ -33,7 +33,7 @@ class SwiGLU(nn.Module):
         factory_kwargs = {"device": device, "dtype": dtype}
 
         if d_ff is None:
-            # 根据 PDF 规范: d_ff 约等于 8/3 * d_model，且是 64 的倍数
+            # 根据作业要求中规范: d_ff 约等于 8/3 * d_model，且是 64 的倍数
             d_ff = int((8 / 3) * d_model)
             d_ff = (d_ff + 63) // 64 * 64
         
