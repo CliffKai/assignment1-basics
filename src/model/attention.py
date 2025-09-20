@@ -23,7 +23,7 @@ def scaled_dot_product_attention(
     d_k = q.size(-1)
     
     # 计算注意力分数: (Q * K^T) / sqrt(d_k)
-    scores = einsum("... i d, ... j d -> ... i j", q, k) / math.sqrt(d_k)
+    scores = einsum(q, k, "... i d, ... j d -> ... i j") / math.sqrt(d_k)
 
     # 应用掩码
     if mask is not None:
