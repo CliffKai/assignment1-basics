@@ -1,4 +1,3 @@
-# 在 TinyStories 上从头开始训练
 uv run python train.py \
     --train_data_path=/root/data/cs336/tinystories_train.npy \
     --val_data_path=/root/data/cs336/tinystories_val.npy \
@@ -8,11 +7,16 @@ uv run python train.py \
     --num_layers=4 \
     --num_heads=16 \
     --d_ff=1344 \
-    --batch_size=32 \
-    --max_steps=100 \
-    --eval_interval=50 \
-    --out_dir=./checkpoints/tinystories_sanity_check \
-    --device=cuda
 
-# 从检查点继续训练
-uv run python train.py --init_from=resume
+    --batch_size=8 \
+    --max_steps=100 \
+    --eval_interval=10 \
+    --log_interval=1 \
+    
+    --learning_rate=3e-4 \
+    --warmup_steps=0 \
+    
+    --out_dir=./checkpoints/sanity_check \
+    --device=cuda \
+    --wandb_log \
+    --wandb_run_name="sanity-check-fixed-lr"

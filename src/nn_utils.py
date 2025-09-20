@@ -17,17 +17,22 @@ def cross_entropy(inputs: Tensor, targets: Tensor) -> Tensor:
     gathered = log_probs.gather(1, targets.view(-1, 1)).squeeze(1)  # (B,)
     return -gathered.mean()                                    # 标准 mean reduction
 
+
 def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
     params = [p for p in parameters if p.grad is not None]
     if not params:
         return
-    device = params[0].grad.device
-    grads_norms = torch.stack([p.grad.detach().norm(2) for p in params]).to(device)
-    total_norm = grads_norms.norm(2)
-    clip_coef = max_l2_norm / (total_norm + 1e-6)  # +epsilon 防 0
+    
+    # 直接在原始梯度上计算总范数
+    with torch.no_grad():
+        total_norm = torch.norm(torch.stack([torch.norm(p.grad, 2) for p in params]), 2)
+    
+    clip_coef = max_l2_norm / (total_norm + 1e-6)
+    
     if clip_coef < 1.0:
         for p in params:
-            p.grad.detach().mul_(clip_coef.to(p.grad.device))  # 原地缩放
+            # 直接在原始梯度上进行原地缩放
+            p.grad.mul_(clip_coef)
 
 def silu(x: Float[Tensor, "..."]) -> Float[Tensor, "..."]:
     """
