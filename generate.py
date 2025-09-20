@@ -2,7 +2,6 @@ import argparse
 import torch
 import os
 
-# 导入你自己的实现
 from src.model.transformer import TransformerLM
 from src.bpe.tokenizer import Tokenizer
 from src.io import load_checkpoint
