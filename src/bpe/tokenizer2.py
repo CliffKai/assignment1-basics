@@ -4,7 +4,6 @@ from dataclasses import dataclass
 import regex as re
 from typing import Dict, Iterable, Iterator, List, Tuple, Optional
 
-# --- Public factory (no changes needed here) ---
 def get_tokenizer(
     vocab: Dict[int, bytes],
     merges: List[Tuple[bytes, bytes]],
@@ -13,12 +12,8 @@ def get_tokenizer(
     return _Tokenizer(vocab, merges, special_tokens or [])
 
 
-# --- Main Tokenizer Implementation ---
 @dataclass
 class _Tokenizer:
-    # --- 修正点在这里 ---
-    # 使用与 tiktoken gpt2 编码完全一致的正则表达式
-    # 这个版本能正确处理单词前的可选空格，确保与参考实现一致
     PAT_STR = r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
     def __init__(self, vocab: Dict[int, bytes], merges: List[Tuple[bytes, bytes]], specials: List[str]) -> None:
@@ -36,8 +31,6 @@ class _Tokenizer:
         else:
             self.special_pat = None
 
-    # ------------------------ public API (无变化) ------------------------
-
     def encode(self, text: str) -> List[int]:
         return list(self._encode_generator(text))
 
@@ -50,8 +43,6 @@ class _Tokenizer:
             return ""
         b = b"".join(self.id_to_bytes[i] for i in ids)
         return b.decode("utf-8", errors="replace")
-
-    # ------------------------ internal helpers (无变化) ------------------------
 
     def _encode_generator(self, text: str) -> Iterator[int]:
         if not text:

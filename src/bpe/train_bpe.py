@@ -162,7 +162,7 @@ def run_train_bpe(
             if not chunk_text:
                 break
             
-            # 使用你的并行函数处理当前块
+            # 使用并行函数处理当前块
             chunk_counts = parallel_pre_tokenize(chunk_text, special_tokens)
             # 聚合结果
             pre_token_counts.update(chunk_counts)
@@ -170,7 +170,7 @@ def run_train_bpe(
 
     print("  - 所有数据块预分词完成。")
 
-    # 将单词转换为字节元组的表示形式...
+    # 将单词转换为字节元组的表示形式
     word_counts = {
         tuple(bytes([b]) for b in word): count
         for word, count in pre_token_counts.items()
@@ -188,7 +188,6 @@ def run_train_bpe(
             break
         
         # 找到频率最高的字节对。如果频率相同，max()会根据元组的字典序来决定，
-        # 这满足了PDF中的平局处理规则。
         best_pair = max(stats, key=lambda p: (stats[p], p))
         
         # 执行合并

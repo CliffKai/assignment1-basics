@@ -112,8 +112,8 @@ def main():
     checkpoint = torch.load(args.checkpoint_path, map_location=device)
     
     # 从检查点中获取模型参数来初始化模型
-    # 注意：你需要确保这些参数与训练时使用的参数一致
-    # 对于实验，更好的做法是将模型配置保存在检查点中
+    # 注意：需要确保这些参数与训练时使用的参数一致
+    # 更好的做法是将模型配置保存在检查点中
     model_args = checkpoint.get("model_args", None)
     if model_args is None:
         # 如果检查点中没有保存模型参数，就从命令行参数中推断
