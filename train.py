@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import wandb
 
-# 导入你自己的实现
 from src.model.transformer import TransformerLM
 from src.optim_sched import get_adamw_cls, get_lr_cosine_schedule
 from src.data import get_batch
