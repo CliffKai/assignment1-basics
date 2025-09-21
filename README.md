@@ -1,14 +1,14 @@
 # 指南
 
-1. Note：作业讲解
-2. src：作业代码
+1. [Note](https://github.com/CliffKai/assignment1-basics/tree/main/Note)：作业讲解
+2. [src](https://github.com/CliffKai/assignment1-basics/tree/main/src)：作业代码
 3. 课堂笔记（如果会记的话）：https://github.com/CliffKai/spring2025-lectures
 
 # 运行
 
 ## 1.测试
 
-1. 所有模块都测试：
+1. 测试所有模块：
 
 ```sh
 uv run pytest
