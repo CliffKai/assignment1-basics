@@ -1,5 +1,6 @@
-export WANDB_PROJECT=cs336-assignment1
-export WANDB_ENTITY=kkwei0819
+export WANDB_ENTITY=kkwei0819-beijing-jiaotong-university
+export WANDB_PROJECT=cs336_assignment1
+
 
 LR="3e-4"
 # min_lr (通常是 LR / 10)

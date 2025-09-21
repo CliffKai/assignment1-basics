@@ -137,7 +137,12 @@ def main():
 
     # WandB 设置
     if args.wandb_log:
-        wandb.init(project=args.wandb_project, name=args.wandb_run_name, config=args)
+        wandb.init(
+        project="cs336_assignment1",
+        entity="kkwei0819-beijing-jiaotong-university",                 
+        name=args.wandb_run_name,
+        config=vars(args),             
+    )
     
     # 训练循环
     print(f"Starting training for {args.max_steps} steps...")
