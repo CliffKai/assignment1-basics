@@ -81,7 +81,7 @@ def main():
 
     # 设置设备
     device = args.device
-    if device == "cuda" and not torch.cuda.is_available():
+    if "cuda" in device and not torch.cuda.is_available():
         print("CUDA not available, falling back to CPU")
         device = "cpu"
     
