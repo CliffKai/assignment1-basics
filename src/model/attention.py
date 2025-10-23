@@ -33,7 +33,7 @@ def scaled_dot_product_attention(
     attn_weights = softmax(scores, dim=-1)
 
     # 应用注意力权重到 V
-    output = torch.matmul(attn_weights, v)
+    output = einsum(attn_weights, v, "... q k, ... k d -> ... q d")
     return output
 
 

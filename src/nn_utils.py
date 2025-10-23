@@ -5,8 +5,8 @@ import torch
 from torch import Tensor
 from jaxtyping import Float
 
-def softmax(in_features: Tensor, dim: int) -> Tensor:
-    shifted = in_features - in_features.max(dim=dim, keepdim=True).values
+def softmax(x: Tensor, dim: int) -> Tensor:
+    shifted = x - x.max(dim=dim, keepdim=True).values
     exps = torch.exp(shifted)
     return exps / exps.sum(dim=dim, keepdim=True)
 
