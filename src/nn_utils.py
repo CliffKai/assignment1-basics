@@ -1,6 +1,6 @@
 # src/nn_utils.py
 from __future__ import annotations
-from typing import Iterable
+from jaxtyping import Iterable
 import torch
 from torch import Tensor
 from jaxtyping import Float
@@ -22,17 +22,13 @@ def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: flo
     params = [p for p in parameters if p.grad is not None]
     if not params:
         return
-    
-    # 直接在原始梯度上计算总范数
-    with torch.no_grad():
-        total_norm = torch.norm(torch.stack([torch.norm(p.grad, 2) for p in params]), 2)
-    
-    clip_coef = max_l2_norm / (total_norm + 1e-6)
-    
+    device = params[0].grad.device
+    grads_norms = torch.stack([p.grad.detach().norm(2) for p in params]).to(device)
+    total_norm = grads_norms.norm(2)
+    clip_coef = max_l2_norm / (total_norm + 1e-6)  # +epsilon 防 0
     if clip_coef < 1.0:
         for p in params:
-            # 直接在原始梯度上进行原地缩放
-            p.grad.mul_(clip_coef)
+            p.grad.detach().mul_(clip_coef.to(p.grad.device))  # 原地缩放
 
 def silu(x: Float[Tensor, "..."]) -> Float[Tensor, "..."]:
     """
