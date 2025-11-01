@@ -38,8 +38,8 @@ class SwiGLU(nn.Module):
             d_ff = (d_ff + 63) // 64 * 64
         
         self.w1 = Linear(d_model, d_ff, **factory_kwargs)
-        self.w2 = Linear(d_model, d_ff, **factory_kwargs)
-        self.w3 = Linear(d_ff, d_model, **factory_kwargs)
+        self.w3 = Linear(d_model, d_ff, **factory_kwargs)
+        self.w2 = Linear(d_ff, d_model, **factory_kwargs)
 
     def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
         """
@@ -52,6 +52,6 @@ class SwiGLU(nn.Module):
             输出张量，形状为 (..., d_model)。
         """
         # FFN(x) = W3(SiLU(W1x) ⊙ W2x)
-        gate = self.w1(x)
-        hidden = silu(self.w2(x))
-        return self.w3(hidden * gate)
+        gate = silu(self.w1(x))
+        hidden = self.w3(x)
+        return self.w2(hidden * gate)

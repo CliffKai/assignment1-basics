@@ -1,6 +1,7 @@
 # src/nn_utils.py
 from __future__ import annotations
-from jaxtyping import Iterable
+# from jaxtyping import Iterable
+from collections.abc import Iterable
 import torch
 from torch import Tensor
 from jaxtyping import Float
