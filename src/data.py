@@ -5,8 +5,11 @@ import numpy.typing as npt
 import torch
 
 def get_batch(
-    *, dataset: npt.NDArray, batch_size: int, context_length: int,
-    device: str, pin_memory: bool = False
+    *, dataset: npt.NDArray, 
+    batch_size: int, 
+    context_length: int,
+    device: torch.device | str | None=None,
+    pin_memory: bool = False
 ):
     is_cuda = str(device).startswith("cuda")
     if pin_memory and not is_cuda:

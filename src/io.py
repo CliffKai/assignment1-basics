@@ -8,7 +8,10 @@ def _is_pathlike(x) -> bool:
     return isinstance(x, (str, bytes, os.PathLike))
 
 def save_checkpoint(
-    *, model: torch.nn.Module, optimizer: torch.optim.Optimizer, iteration: int,
+    *, 
+    model: torch.nn.Module, 
+    optimizer: torch.optim.Optimizer, 
+    iteration: int,
     out: str | os.PathLike | BinaryIO | IO[bytes],
 ) -> None:
     """
@@ -27,8 +30,10 @@ def save_checkpoint(
         torch.save(payload, out)
 
 def load_checkpoint(
-    *, src: str | os.PathLike | BinaryIO | IO[bytes],
-    model: torch.nn.Module, optimizer: torch.optim.Optimizer,
+    *, 
+    src: str | os.PathLike | BinaryIO | IO[bytes],
+    model: torch.nn.Module, 
+    optimizer: torch.optim.Optimizer,
 ) -> int:
     """
     从 src（路径或二进制 file-like）加载 checkpoint，恢复 model/optimizer，并返回 iteration。
