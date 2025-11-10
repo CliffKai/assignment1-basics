@@ -5,6 +5,7 @@ import os
 from src.model.transformer import TransformerLM
 from src.bpe.tokenizer import Tokenizer
 from src.io import load_checkpoint
+from src.nn_utils import softmax
 
 def get_args():
     """解析命令行参数"""
@@ -51,7 +52,7 @@ def generate(model, tokenizer, prompt_ids, max_new_tokens, temperature, top_p):
             logits = logits / temperature
 
         # 计算概率
-        probs = torch.nn.functional.softmax(logits, dim=-1)
+        probs = softmax(logits, dim=-1)
 
         # 应用 Top-p (Nucleus) 采样
         if 0 < top_p < 1.0:

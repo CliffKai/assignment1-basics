@@ -11,6 +11,7 @@ from src.model.transformer import TransformerLM
 from src.optim_sched import get_adamw_cls, get_lr_cosine_schedule
 from src.data import get_batch
 from src.io import save_checkpoint, load_checkpoint
+from src.nn_utils import cross_entropy, gradient_clipping
 
 def get_args():
     """解析命令行参数"""
@@ -71,7 +72,7 @@ def evaluate(model, data, context_length, batch_size, device, max_steps):
             device=device,
         )
         logits = model(X)
-        loss = torch.nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), Y.view(-1))
+        loss = cross_entropy(logits.view(-1, logits.size(-1)), Y.view(-1))
         losses[k] = loss.item()
     model.train()
     return losses.mean()
@@ -183,14 +184,14 @@ def main():
 
         # 前向和后向传播
         logits = model(X)
-        loss = torch.nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), Y.view(-1))
+        loss = cross_entropy(logits.view(-1, logits.size(-1)), Y.view(-1))
 
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
 
         # 梯度裁剪
         if args.grad_clip > 0:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+            gradient_clipping(model.parameters(), args.grad_clip)
 
         optimizer.step()
 
