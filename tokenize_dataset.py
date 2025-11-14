@@ -1,3 +1,5 @@
+# 将文本数据集转化为模型可以处理的.npy 数字格式
+
 import numpy as np
 from src.bpe.tokenizer import Tokenizer
 
@@ -19,7 +21,7 @@ def tokenize_file(input_path, output_path):
         text = f.read()
 
     ids = tokenizer.encode(text)
-    # 使用 uint16 格式保存，节省空间 (PDF 推荐)
+    # 使用 uint16 格式保存，节省空间
     arr = np.array(ids, dtype=np.uint16)
 
     np.save(output_path, arr)
