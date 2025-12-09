@@ -1,6 +1,6 @@
 [project]
 name = "cs336_basics"
-version = "1.0.5"
+version = "1.0.6"
 description = "CS336 Assignment 1"
 readme = "README.md"
 requires-python = ">=3.11"
