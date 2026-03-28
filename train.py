@@ -52,6 +52,7 @@ def get_args():
     parser.add_argument("--eval_interval", type=int, default=250, help="Steps between evaluations")
     parser.add_argument("--eval_steps", type=int, default=100, help="Number of steps for evaluation")
     parser.add_argument("--log_interval", type=int, default=10, help="Steps between logging training loss")
+    parser.add_argument("--save_interval", type=int, default=5000, help="Steps between saving checkpoints")
     
     # 性能
     parser.add_argument("--device", type=str, default="cuda", help="Device to use ('cpu', 'cuda', 'mps')")
@@ -169,9 +170,13 @@ def main():
                 }, step=step)
             
             # 保存检查点
-            ckpt_path = os.path.join(args.out_dir, "ckpt.pt")
-            save_checkpoint(model=model, optimizer=optimizer, iteration=step, out=ckpt_path)
-            print(f"Checkpoint saved to {ckpt_path}")
+            if step % args.save_interval == 0:
+                ckpt_path = os.path.join(args.out_dir, f"ckpt_step{step}.pt")
+                save_checkpoint(model=model, optimizer=optimizer, iteration=step, out=ckpt_path)
+                print(f"Checkpoint saved to {ckpt_path}")
+            # 始终保存最新检查点（用于续训）
+            latest_path = os.path.join(args.out_dir, "ckpt.pt")
+            save_checkpoint(model=model, optimizer=optimizer, iteration=step, out=latest_path)
 
 
         # 获取训练数据
